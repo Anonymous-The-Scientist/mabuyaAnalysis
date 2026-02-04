@@ -704,8 +704,6 @@ print("Chi-square test results:")
 print(chi_test_autotomy_3way)
 ```
 
-Proportionally, we also have more autotomized individuals in the APA than in PARNA and half in secondary islands, which is also an indication of higher predation pressure on the main island. But, this is not significant. It would be interesting to increase our samples to be able to infer better.
-
 Autotomy was proportionally more frequent in the HPS than in HPU and roughly twice that observed on the secondary islands, suggesting elevated predation pressure on the main island. However, these differences were not statistically significant. Our power analyses indicate that this outcome is largely due to limited sample sizes—particularly on the secondary islands—rather than the absence of a biological effect, highlighting the need for expanded sampling to better resolve these patterns.
 
 # Combined Size and Injury Visualization
