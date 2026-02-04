@@ -18,18 +18,18 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width =
 
 # Introduction
 
-This analysis examines Mabuya (Trachylepis atlantica; skink) populations across three distinct sites (i.e., Secondary Islands, PARNAMAR and APA) on Fernando de Noronha archipelago, investigating how invasive species presence and food supplementation affect population density, body size, and injury rates.
+This analysis examines Mabuya (Trachylepis atlantica; skink) populations across three distinct sites (i.e., LPU [Low Predator Unsubsidized], HPU [High Predator Unsubsidized] and HPS [High Predator Subsidized]) on Fernando de Noronha archipelago, investigating how invasive species presence and food supplementation affect population density, body size, and injury rates.
 
 ## Study Area Context
 
 The study encompasses the following areas:
 
 - **Main Island: 16.89 km²**
-  - PARNAMAR: 11.424 km²
-  - APA: 5.466 km²
-- **Secondary Islands: 1.33 km²**
-- **TOTAL PARNA: 12.754 km²**
-- **TOTAL TERRESTRIAL AREA (PARNA + APA): 18.22 km²**
+  - HPU: 11.424 km²
+  - HPS: 5.466 km²
+- **LPU: 1.33 km²**
+- **TOTAL UNSUBSIDIZED (HPU + LPU): 12.754 km²**
+- **TOTAL AREA (HPU + HPS + LPU): 18.22 km²**
 
 # Package Setup
 
@@ -51,6 +51,7 @@ Require::Require("xlsx")
 Require::Require("ggplot2")
 Require::Require("multcompView")
 Require::Require("dplyr")
+Require::Require("pwr")
 ```
 
 # Survey Effort Analysis
@@ -67,9 +68,9 @@ mabuia_dd <- fread("data/Density_Data.csv")
 
 ```{r survey-effort-calc}
 pointsCounts <- mabuia_dd[, .N, by = "Site"]
-pointsCounts[Site == "APA", pointsArea := 5.466]
-pointsCounts[Site == "PARNA", pointsArea := 11.424]
-pointsCounts[Site == "Secundaria", pointsArea := 1.33]
+pointsCounts[Site == "HPS", pointsArea := 5.466]
+pointsCounts[Site == "HPU", pointsArea := 11.424]
+pointsCounts[Site == "LPU", pointsArea := 1.33]
 pointsCounts[, pointsDensity := N/pointsArea]
 pointsCounts[, propPoints := N/(sum(pointsCounts[, N]))]
 pointsCounts[, propSize := pointsArea/(sum(pointsCounts[, pointsArea]))]
@@ -82,11 +83,11 @@ print(pointsCounts)
 
 There is indeed a bit of unbalance but it is not as critical as it seems:
 
-- **APA**: 39% points over 30% area
-- **PARNA**: 37% points over 62% area  
-- **Secondary**: 25% points over 7% area
+- **HPS**: 39% points over 30% area
+- **HPU**: 37% points over 62% area  
+- **LPU**: 25% points over 7% area
 
-The sampling is reasonably proportional to area, with only modest over-sampling of Secondary Islands and slight under-sampling of PARNAMAR relative to area.
+The sampling is reasonably proportional to area, with only modest over-sampling of LPU and slight under-sampling of HPU relative to area.
 
 # Population Density Analysis
 
@@ -106,18 +107,18 @@ The survey area is approximately 12.566 m² per point, which we'll use as an off
 We need to convert site identity into ecologically meaningful predictor variables based on site characteristics.
 
 ```{r create-predictors}
-siteLevels <- factor(c("APA", "PARNA", "Secundaria"),
-                       levels = c("APA", "PARNA", "Secundaria"))
+siteLevels <- factor(c("HPS", "HPU", "LPU"),
+                       levels = c("HPS", "HPU", "LPU"))
 
-# Invasive Species Presence (assuming key invasives like Cats and Tejus are largely absent from Secondary Islands)
-mabuia_dd[Site == "APA", InvasiveSpeciesPresence := 1]
-mabuia_dd[Site == "PARNA", InvasiveSpeciesPresence := 1]
-mabuia_dd[Site == "Secundaria", InvasiveSpeciesPresence := 0]
+# Invasive Species Presence (assuming key invasives like Cats and Tejus are largely absent from LPU)
+mabuia_dd[Site == "HPS", InvasiveSpeciesPresence := 1]
+mabuia_dd[Site == "HPU", InvasiveSpeciesPresence := 1]
+mabuia_dd[Site == "LPU", InvasiveSpeciesPresence := 0]
 
 # Food Supplementation
-mabuia_dd[Site == "APA", FoodSupplementation := 1]
-mabuia_dd[Site == "PARNA", FoodSupplementation := 0]
-mabuia_dd[Site == "Secundaria", FoodSupplementation := 0]
+mabuia_dd[Site == "HPS", FoodSupplementation := 1]
+mabuia_dd[Site == "HPU", FoodSupplementation := 0]
+mabuia_dd[Site == "LPU", FoodSupplementation := 0]
 
 # Convert to factors for modeling
 mabuia_dd[, InvasiveSpeciesPresence := as.factor(InvasiveSpeciesPresence)]
@@ -228,15 +229,15 @@ density_df <- as.data.frame(summary(emm_density_hierarchical, infer = TRUE))
 density_df$Site <- ifelse(
   density_df$InvasiveSpeciesPresence == 0 & density_df$FoodSupplementation == 1, "Hypothetical Site",
   ifelse(
-    density_df$InvasiveSpeciesPresence == 0 & density_df$FoodSupplementation == 0, "Secondary Islands",
+    density_df$InvasiveSpeciesPresence == 0 & density_df$FoodSupplementation == 0, "LPU",
     ifelse(
-      density_df$InvasiveSpeciesPresence == 1 & density_df$FoodSupplementation == 1, "APA",
-      "PARNAMAR"
+      density_df$InvasiveSpeciesPresence == 1 & density_df$FoodSupplementation == 1, "HPS",
+      "HPU"
     )
   )
 )
 
-density_df$Site <- factor(density_df$Site, levels = c("Hypothetical Site", "Secondary Islands", "APA", "PARNAMAR"))
+density_df$Site <- factor(density_df$Site, levels = c("Hypothetical Site", "LPU", "HPS", "HPU"))
 
 # Rename columns for clarity
 names(density_df)[names(density_df) == 'response'] <- 'mean_density'
@@ -289,31 +290,10 @@ density_df$y_position_for_text <- density_df$upper_ci + 0.05
 ```{r density-plot}
 two_line_labels <- c(
   "Hypothetical\n(Subsidies / Reduced Predators)",
-  "Secondary Islands\n(No Subsidies / Reduced Predators)",
-  "APA\n(Subsidies / Full Predators)",
-  "PARNAMAR\n(No Subsidies / Full Predators)"
+  "LPU\n(No Subsidies / Reduced Predators)",
+  "HPS\n(Subsidies / Full Predators)",
+  "HPU\n(No Subsidies / Full Predators)"
 )
-
-# density_plot <- ggplot(density_df, aes(x = Site, y = mean_density, fill = Site)) +
-#   geom_bar(stat = "identity", color = "black", alpha = 0.8) +
-#   geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci),
-#                 width = 0.2, color = "black", linewidth = 0.5) +
-#   geom_text(aes(y = y_position_for_text, label = significance_group),
-#             size = 6, fontface = "bold", color = "black") +
-#   scale_x_discrete(labels = two_line_labels) +
-#   scale_fill_viridis_d(option = "D") +
-#   labs(y = expression("Estimated Density (individuals / m"^2*")")) +
-#   theme_bw(base_size = 14) +
-#   theme(
-#     axis.title = element_text(face = "bold"),
-#     axis.text.x = element_text(face = "bold"),
-#     axis.title.x = element_blank(),
-#     panel.grid.major.x = element_blank(),
-#     panel.grid.minor = element_blank(),
-#     legend.position = "none"
-#   )
-# 
-# print(density_plot)
 
 density_plot <- ggplot(density_df, aes(x = Site, y = mean_density, fill = Site)) +
   # Add bars and error bars from the GLM
@@ -325,17 +305,17 @@ density_plot <- ggplot(density_df, aes(x = Site, y = mean_density, fill = Site))
             size = 6, fontface = "bold", color = "black") +
 
   # --- ANNOTATION FOR CMR RESULT ---
-  # Add a bracket connecting APA and PARNAMAR bars
-  annotate("segment", x = "APA", xend = "PARNAMAR", y = 0.40, yend = 0.40,
+  # Add a bracket connecting HPS and HPU bars
+  annotate("segment", x = "HPS", xend = "HPU", y = 0.40, yend = 0.40,
            color = "black", linewidth = 0.7) +
   # New position for the left vertical tick (pointing down).
-  annotate("segment", x = "APA", xend = "APA", y = 0.40, yend = 0.38,
+  annotate("segment", x = "HPS", xend = "HPS", y = 0.40, yend = 0.38,
            color = "black", linewidth = 0.7) +
   # New position for the right vertical tick (pointing down).
-  annotate("segment", x = "PARNAMAR", xend = "PARNAMAR", y = 0.40, yend = 0.38,
+  annotate("segment", x = "HPU", xend = "HPU", y = 0.40, yend = 0.38,
            color = "black", linewidth = 0.7) +
   # New position for the text, slightly above the bracket line.
-  annotate("text", x = 3.5, y = 0.43, label = "CMR confirms APA > PARNAMAR (p < 0.001)",
+  annotate("text", x = 3.5, y = 0.43, label = "CMR confirms HPS > HPU (p < 0.001)",
            fontface = "italic", color = "black", size = 4) +
 
   # --- SCALES, LABELS, and THEMING ---
@@ -583,9 +563,9 @@ print("Parameter estimates from best CMR model:")
 print(betaTable)
 ```
 
-This table shows us that alpha (resighting rate/detection probability) is significantly **HIGHER** in PARNA while U (population size) is significantly **LOWER** in PARNA. So, this means that we DO see/capture more in PARNA, and yet, the population size is considerably smaller. This is due to a clear pressure of invasive species and the potential effects of food supplementation.
+This table shows us that alpha (resighting rate/detection probability) is significantly **HIGHER** in HPU while U (population size) is significantly **LOWER** in HPU. So, this means that we DO see/capture more in HPU, and yet, the population size is considerably smaller. This is due to a clear pressure of invasive species and the potential effects of food supplementation.
 
-**Note**: We did not manage capture-recapture on Secondary islands due to impossible logistics.
+**Note**: We did not manage capture-recapture on LPU islands due to impossible logistics.
 
 # Body Size Analysis
 
@@ -601,9 +581,9 @@ mabuia_ds <- fread("data/Size_Data.csv")
 
 ```{r size-sampling-balance}
 pointsCounts_size <- mabuia_ds[, .N, by = "site"]
-pointsCounts_size[site == "APA", pointsArea := 5.466]
-pointsCounts_size[site == "PARNA", pointsArea := 11.424]
-pointsCounts_size[site == "Secondary", pointsArea := 1.33]
+pointsCounts_size[site == "HPS", pointsArea := 5.466]
+pointsCounts_size[site == "HPU", pointsArea := 11.424]
+pointsCounts_size[site == "LPU", pointsArea := 1.33]
 pointsCounts_size[, pointsDensity := N/pointsArea]
 pointsCounts_size[, propPoints := N/(sum(pointsCounts_size[, N]))]
 pointsCounts_size[, propSize := pointsArea/(sum(pointsCounts_size[, pointsArea]))]
@@ -614,14 +594,14 @@ print(pointsCounts_size)
 
 There is indeed a bit of unbalance but it is not as critical as it seems:
 
-- **APA**: 47% points over 30% area
-- **PARNA**: 36% points over 62% area
-- **Secondary**: 16% points over 7% area
+- **HPS**: 47% points over 30% area
+- **HPU**: 36% points over 62% area
+- **LPU**: 16% points over 7% area
 
 ## Step 3: Factor Level Setup
 
 ```{r size-factors}
-mabuia_ds[, site := factor(site, levels = c("Secondary", "APA","PARNA"))] # "Secondary" as reference
+mabuia_ds[, site := factor(site, levels = c("LPU", "HPS","HPU"))] # "LPU" as reference
 mabuia_ds[, sex := factor(sex)] # R will pick a reference, usually "F" alphabetically
 ```
 
@@ -726,13 +706,15 @@ print(chi_test_autotomy_3way)
 
 Proportionally, we also have more autotomized individuals in the APA than in PARNA and half in secondary islands, which is also an indication of higher predation pressure on the main island. But, this is not significant. It would be interesting to increase our samples to be able to infer better.
 
+Autotomy was proportionally more frequent in the HPS than in HPU and roughly twice that observed on the secondary islands, suggesting elevated predation pressure on the main island. However, these differences were not statistically significant. Our power analyses indicate that this outcome is largely due to limited sample sizes—particularly on the secondary islands—rather than the absence of a biological effect, highlighting the need for expanded sampling to better resolve these patterns.
+
 # Combined Size and Injury Visualization
 
 ## Step 1: Preparing Interaction Data for Plotting
 
 ```{r plot-interaction-prep}
 dt_df <- as.data.frame(dt)
-dt_df$site <- factor(dt_df$site, levels = c("Secondary", "APA", "PARNA"))
+dt_df$site <- factor(dt_df$site, levels = c("LPU", "HPS", "HPU"))
 
 # Get significance testing for interaction model
 pairs_interaction <- contrast(emm_interaction, method = "pairwise", adjust = "tukey")
@@ -783,7 +765,7 @@ females_autotomy_df$sex <- "Females"
 
 # Combine
 autotomy_df_final <- rbind(males_autotomy_df, females_autotomy_df)
-autotomy_df_final$site <- factor(autotomy_df_final$site, levels = c("Secondary", "APA", "PARNA"))
+autotomy_df_final$site <- factor(autotomy_df_final$site, levels = c("LPU", "HPS", "HPU"))
 autotomy_df_final$sex <- factor(autotomy_df_final$sex, levels = c("Females", "Males"))
 plot(autotomy_df_final)
 ```
