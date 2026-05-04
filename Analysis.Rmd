@@ -1,5 +1,5 @@
 ---
-title: "Fueling a predator death-trap: data analysis"
+title: "Deceptive density: evidence-oriented inference reveals how subsidies can mask predator death-traps"
 author: "Anonymous The Scientist"
 date: "`r Sys.Date()`"
 output:
@@ -289,10 +289,10 @@ density_df$y_position_for_text <- density_df$upper_ci + 0.05
 
 ```{r density-plot}
 two_line_labels <- c(
-  "Hypothetical\n(Subsidies / Reduced Predators)",
-  "LPU\n(No Subsidies / Reduced Predators)",
-  "HPS\n(Subsidies / Full Predators)",
-  "HPU\n(No Subsidies / Full Predators)"
+  "Hypothetical LPS\n(Low Predator / Subsidised)",
+  "LPU\n(Low Predators/ Unsubsidised)",
+  "HPS\n(High Predators/ Subsidised)",
+  "HPU\n(High Predators/ Unsubsidised)"
 )
 
 density_plot <- ggplot(density_df, aes(x = Site, y = mean_density, fill = Site)) +
@@ -563,7 +563,7 @@ print("Parameter estimates from best CMR model:")
 print(betaTable)
 ```
 
-This table shows us that alpha (resighting rate/detection probability) is significantly **HIGHER** in HPU while U (population size) is significantly **LOWER** in HPU. So, this means that we DO see/capture more in HPU, and yet, the population size is considerably smaller. This is due to a clear pressure of invasive species and the potential effects of food supplementation.
+This table shows us that alpha (resighting rate/detection probability) is significantly **HIGHER** in HPU while U (population size) is significantly **LOWER** in HPU. So, this means that we DO see/capture more in HPU, and yet, the population size is considerably smaller. This is likely due to pressure of invasive species and the potential effects of food supplementation.
 
 **Note**: We did not manage capture-recapture on LPU islands due to impossible logistics.
 
