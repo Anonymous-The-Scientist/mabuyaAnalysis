@@ -1,5 +1,5 @@
 ---
-title: "Deceptive density: evidence-oriented inference reveals how subsidies can mask predator death-traps"
+title: "Deceptive density: evidence-oriented inference reveals how subsidies can mask predator death-traps (Appendix A)"
 author: "Anonymous The Scientist"
 date: "`r Sys.Date()`"
 output:
